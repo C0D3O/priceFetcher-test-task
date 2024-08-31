@@ -1,4 +1,4 @@
-import express, { json, NextFunction, Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import { check, validationResult } from 'express-validator';
 import { wsClient } from '../lib/wsClient';
 import { supportedTokens } from '../lib/evm';
@@ -39,9 +39,7 @@ app.post('/estimate', validateReq, async (req: Request, res: Response) => {
 
 		const fetchedPrices = await prices.updateAmount(inputAmount, inputCurrency, outputCurrency);
 
-		const [maxExchange, maxPrice] = Object.entries(fetchedPrices).reduce((max, current) => (current[1] > max[1] ? current : max));
-
-		res.send({ name: maxExchange, price: maxPrice });
+		res.send(fetchedPrices.reduce((max, current) => (current[1] > max[1] ? current : max)));
 	} catch (error: any) {
 		res.send({ error: `Internal server error: \n${error.message}` }).status(500);
 	}
@@ -50,8 +48,10 @@ app.post('/estimate', validateReq, async (req: Request, res: Response) => {
 app.post('/getRates', validateReq, async (req: Request, res: Response) => {
 	try {
 		const { inputCurrency, outputCurrency } = req.body;
+		console.log('HI');
 
 		const fetchedPrices = await prices.updateAmount(1, inputCurrency, outputCurrency);
+		console.log('HI2');
 
 		res.send(fetchedPrices);
 	} catch (error: any) {
