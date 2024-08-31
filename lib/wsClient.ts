@@ -208,8 +208,10 @@ export class wsClient {
 			isWETH ? [tokenIn.address, tokenOut.address] : [tokenIn.address, tokens.WETH.address, tokenOut.address]
 		);
 
-		return this.amount / +parseFloat(formatUnits(amountsOut[isWETH ? 1 : 2], tokenOut.decimals));
-		// return +parseFloat(formatUnits(amountsOut[isWETH ? 1 : 2], tokenOut.decimals)).toFixed(2);
+		const amountOut = formatUnits(amountsOut[isWETH ? 1 : 2], tokenOut.decimals);
+
+		return +amountOut / this.amount;
+		// return tokenIn.address === tokens.USDT.address ? +parseFloat(amountOut) / this.amount : this.amount / +amountOut;
 	}
 
 	private calculatePrices(exchangeName: string, inputCurrency?: string, outputCurrency?: string) {
