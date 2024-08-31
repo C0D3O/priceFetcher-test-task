@@ -7,7 +7,8 @@ import { wsClient } from '../lib/wsClient';
 	try {
 		const prices = new wsClient();
 		await new Promise((r) => setTimeout(r, 5000));
-		prices.updateAmount(2);
+		const binancePrice = prices.updateAmount(2, 'BTC', 'USDT');
+		console.log(binancePrice);
 	} catch (error: any) {
 		console.log(error.message);
 	}

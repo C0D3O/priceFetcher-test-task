@@ -28,7 +28,7 @@ export class wsClient {
 		this.amount = newAmount;
 		// WHAT IF AT THIS MOMENT TRADES ARE STOPPED THEN IT MEANS I WOULD GET THE RESULT WITH THE OLD AMOUNT BACK
 
-		this.calculatePrices(inputCurrency, outputCurrency);
+		return this.calculatePrices(inputCurrency, outputCurrency);
 	}
 
 	private async fetchBTCPrices() {
@@ -89,8 +89,20 @@ export class wsClient {
 			this.BTCETH_PRICE = this.BTCUSDT_PRICE / this.ETHUSDT_PRICE;
 			this.ETHBTC_PRICE = this.amount / this.BTCETH_PRICE;
 
-			console.log(`BTC/ETH: ${this.BTCETH_PRICE}`);
-			console.log(`ETH/BTC: ${this.ETHBTC_PRICE}`);
+			// console.log(`BTC/ETH: ${this.BTCETH_PRICE}`);
+			// console.log(`ETH/BTC: ${this.ETHBTC_PRICE}`);
+			// console.log('STREAM');
+
+			if (inputCurrency && outputCurrency) {
+				if (inputCurrency === 'BTC' && outputCurrency === 'USDT') return this.BTCUSDT_PRICE;
+				if (inputCurrency === 'USDT' && outputCurrency === 'BTC') return this.USDTBTC_PRICE;
+
+				if (inputCurrency === 'ETH' && outputCurrency === 'USDT') return this.ETHUSDT_PRICE;
+				if (inputCurrency === 'USDT' && outputCurrency === 'ETH') return this.USDTETH_PRICE;
+
+				if (inputCurrency === 'BTC' && outputCurrency === 'ETH') return this.BTCETH_PRICE;
+				if (inputCurrency === 'ETH' && outputCurrency === 'BTC') return this.ETHBTC_PRICE;
+			}
 		}
 	}
 }
