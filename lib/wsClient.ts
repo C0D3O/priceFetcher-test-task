@@ -77,15 +77,15 @@ export class wsClient {
 
 	private calculatePrices(inputCurrency?: string, outputCurrency?: string) {
 		if (this.wsCacheBTCUSDT && this.wsCacheETHUSDT) {
-			// GET
+			// GET BTC PRICE
 			this.BTCUSDT_PRICE = this.wsCacheBTCUSDT * this.amount;
 			this.USDTBTC_PRICE = this.amount / this.BTCUSDT_PRICE;
 
-			// GET
+			// GET ETH PRICE
 			this.ETHUSDT_PRICE = this.wsCacheETHUSDT * this.amount;
 			this.USDTETH_PRICE = this.amount / this.ETHUSDT_PRICE;
 
-			// Calculate BTC/ETH and ETH/BTC prices based on the specified amount
+			// GET BTC ETH PRICE
 			this.BTCETH_PRICE = this.BTCUSDT_PRICE / this.ETHUSDT_PRICE;
 			this.ETHBTC_PRICE = this.amount / this.BTCETH_PRICE;
 
