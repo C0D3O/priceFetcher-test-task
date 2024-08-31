@@ -9,7 +9,7 @@ import { wsClient } from '../lib/wsClient';
 		// console.log(prices.updateAmount(2, 'BTC', 'USDT'));
 		// console.log(prices.updateAmount(3, 'BTC', 'USDT'));
 		// console.log(prices.updateAmount(2, 'BTC', 'USDT'));
-		console.log('PRICE', prices.updateAmount(1, 'BTC', 'USDT'));
+		console.log('PRICE', await prices.updateAmount(2500, 'USDT', 'ETH'));
 	} catch (error: any) {
 		console.log(error.message);
 	}

@@ -1,4 +1,6 @@
+import { formatUnits, parseUnits } from 'ethers';
 import { WebSocket } from 'ws';
+import { tokens, uniswapContract } from './evm';
 
 interface Prices {
 	[key: string]: number;
@@ -34,12 +36,19 @@ export class wsClient {
 	}
 
 	// Method to update the amount dynamically
-	public updateAmount(newAmount: number, inputCurrency?: string, outputCurrency?: string) {
+	public async updateAmount(newAmount: number, inputCurrency?: string, outputCurrency?: string) {
 		this.amount = newAmount;
 
+		const [binancePrice, kucoinPrice, uniswapPrice] = await Promise.all([
+			this.calculatePrices('binance', inputCurrency, outputCurrency),
+			this.calculatePrices('kucoin', inputCurrency, outputCurrency),
+			this.fetchUniswapPrices(inputCurrency, outputCurrency),
+		]);
+
 		return {
-			binance: this.calculatePrices('binance', inputCurrency, outputCurrency),
-			kucoin: this.calculatePrices('kucoin', inputCurrency, outputCurrency),
+			binance: binancePrice,
+			kucoin: kucoinPrice,
+			uniswap: uniswapPrice,
 		};
 	}
 
@@ -90,7 +99,6 @@ export class wsClient {
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////// KUCOIN //////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
@@ -179,6 +187,29 @@ export class wsClient {
 			await new Promise((r) => setTimeout(r, 1000));
 			this.fetchBTCPricesKucoin();
 		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////// UNISWAP /////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////
+
+	async fetchUniswapPrices(inputCurrency?: string, outputCurrency?: string) {
+		const isWETH = inputCurrency === 'ETH' || outputCurrency === 'ETH';
+
+		const tokenIn = inputCurrency === 'ETH' ? tokens.WETH : tokens[inputCurrency];
+		const tokenOut = outputCurrency === 'ETH' ? tokens.WETH : tokens[outputCurrency];
+
+		const amountsOut = await uniswapContract.getAmountsOut(
+			parseUnits(String(this.amount), tokenIn.decimals),
+			isWETH ? [tokenIn.address, tokenOut.address] : [tokenIn.address, tokens.WETH.address, tokenOut.address]
+		);
+
+		return this.amount / +parseFloat(formatUnits(amountsOut[isWETH ? 1 : 2], tokenOut.decimals));
+		// return +parseFloat(formatUnits(amountsOut[isWETH ? 1 : 2], tokenOut.decimals)).toFixed(2);
 	}
 
 	private calculatePrices(exchangeName: string, inputCurrency?: string, outputCurrency?: string) {
