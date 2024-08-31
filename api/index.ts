@@ -1,4 +1,4 @@
-import express, { NextFunction, Request, Response } from 'express';
+import express, { json, NextFunction, Request, Response } from 'express';
 import { check, validationResult } from 'express-validator';
 import { wsClient } from '../lib/wsClient';
 import { supportedTokens } from '../lib/evm';
@@ -8,6 +8,8 @@ import { supportedTokens } from '../lib/evm';
 const prices = new wsClient();
 
 const app = express();
+
+app.use(express.json());
 
 const validateReq = [
 	check('inputCurrency').isString().withMessage('inputCurrency must be a string'),
@@ -33,19 +35,13 @@ const validateReq = [
 
 app.post('/estimate', validateReq, async (req: Request, res: Response) => {
 	try {
-		const { inputAmount, inputCurrency, outputCurrency } = req.body;
+		const { inputCurrency, outputCurrency, inputAmount } = req.body;
 
 		const fetchedPrices = await prices.updateAmount(inputAmount, inputCurrency, outputCurrency);
 
-		if (inputCurrency === 'USDT' || inputCurrency === 'ETH') {
-			const [maxExchange, maxPrice] = Object.entries(fetchedPrices).reduce((max, current) => (current[1] > max[1] ? current : max));
+		const [maxExchange, maxPrice] = Object.entries(fetchedPrices).reduce((max, current) => (current[1] > max[1] ? current : max));
 
-			res.send({ name: maxExchange, price: maxPrice });
-		} else {
-			const [minExchange, minPrice] = Object.entries(fetchedPrices).reduce((min, current) => (current[1] < min[1] ? current : min));
-
-			res.send({ exchange: minExchange, price: minPrice });
-		}
+		res.send({ name: maxExchange, price: maxPrice });
 	} catch (error: any) {
 		res.send({ error: `Internal server error: \n${error.message}` }).status(500);
 	}
