@@ -38,7 +38,6 @@ export class wsClient {
 	// Method to update the amount dynamically
 	public async updateAmount(newAmount: number, inputCurrency?: string, outputCurrency?: string) {
 		this.amount = newAmount;
-		console.log(newAmount);
 
 		const [binancePrice, kucoinPrice, uniswapPrice] = await Promise.all([
 			this.calculatePrices('binance', inputCurrency, outputCurrency),
@@ -66,7 +65,6 @@ export class wsClient {
 
 			if (p) {
 				this.wsCacheBTCUSDT['binance'] = parseFloat(p);
-
 				this.calculatePrices('binance');
 			}
 		});
@@ -214,23 +212,22 @@ export class wsClient {
 
 		// return +amountOut / this.amount;
 		return tokenIn.address === tokens.USDT.address
-			? this.amount > 1
-				? parseFloat(amountOut) * this.amount
-				: parseFloat(amountOut) / this.amount
-			: this.amount < 1
 			? parseFloat(amountOut)
-			: 1 / parseFloat(amountOut) / this.amount;
+			: /////////////
+			this.amount < 1
+			? parseFloat(amountOut)
+			: parseFloat(amountOut) / this.amount;
 	}
 
 	private calculatePrices(exchangeName: string, inputCurrency?: string, outputCurrency?: string) {
 		if (this.wsCacheBTCUSDT[exchangeName] && this.wsCacheETHUSDT[exchangeName]) {
 			// GET BTC PRICE
 			this.BTCUSDT_PRICE[exchangeName] = this.wsCacheBTCUSDT[exchangeName] * this.amount;
-			this.USDTBTC_PRICE[exchangeName] = 1 / this.BTCUSDT_PRICE[exchangeName];
+			this.USDTBTC_PRICE[exchangeName] = this.amount / this.wsCacheBTCUSDT[exchangeName];
 
 			// GET ETH PRICE
 			this.ETHUSDT_PRICE[exchangeName] = this.wsCacheETHUSDT[exchangeName] * this.amount;
-			this.USDTETH_PRICE[exchangeName] = 1 / this.ETHUSDT_PRICE[exchangeName];
+			this.USDTETH_PRICE[exchangeName] = this.amount / this.wsCacheETHUSDT[exchangeName];
 
 			// GET BTC ETH PRICE
 			this.BTCETH_PRICE[exchangeName] = this.BTCUSDT_PRICE[exchangeName] / this.ETHUSDT_PRICE[exchangeName];
