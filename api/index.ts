@@ -3,7 +3,15 @@ import { uniswapContract } from '../lib/evm';
 
 import { wsClient } from '../lib/wsClient';
 
-const prices = new wsClient(1);
+(async () => {
+	try {
+		const prices = new wsClient();
+		await new Promise((r) => setTimeout(r, 5000));
+		prices.updateAmount(2);
+	} catch (error: any) {
+		console.log(error.message);
+	}
+})();
 
 const app = express();
 

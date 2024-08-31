@@ -1,10 +1,11 @@
 import { WebSocket } from 'ws';
 
 export class wsClient {
-	public amount: number;
-
 	private wsBTC: WebSocket | null = null;
 	private wsETH: WebSocket | null = null;
+
+	private wsCacheBTCUSDT: number | null = null;
+	private wsCacheETHUSDT: number | null = null;
 
 	public BTCUSDT_PRICE: number | null = null;
 	public USDTBTC_PRICE: number | null = null;
@@ -15,13 +16,22 @@ export class wsClient {
 	public BTCETH_PRICE: number | null = null;
 	public ETHBTC_PRICE: number | null = null;
 
-	constructor(amount: number) {
-		this.amount = amount;
+	public amount: number = 1;
+
+	constructor() {
 		this.fetchBTCPrices();
 		this.fetchETHPrices();
 	}
 
-	async fetchBTCPrices() {
+	// Method to update the amount dynamically
+	public updateAmount(newAmount: number, inputCurrency?: string, outputCurrency?: string) {
+		this.amount = newAmount;
+		// WHAT IF AT THIS MOMENT TRADES ARE STOPPED THEN IT MEANS I WOULD GET THE RESULT WITH THE OLD AMOUNT BACK
+
+		this.calculatePrices(inputCurrency, outputCurrency);
+	}
+
+	private async fetchBTCPrices() {
 		this.wsBTC = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
 
 		this.wsBTC.on('open', () => {
@@ -32,22 +42,19 @@ export class wsClient {
 			const { p } = JSON.parse(message.toString());
 
 			if (p) {
-				this.BTCUSDT_PRICE = parseFloat(p);
-				this.getBTCETH_Price();
+				// Calculate the total value for the specified amount of BTC
+				this.wsCacheBTCUSDT = parseFloat(p);
 
-				this.USDTBTC_PRICE = this.amount / this.BTCUSDT_PRICE;
-
-				// console.log(`BTC/USDT: ${this.BTCUSDT_PRICE}`);
-				// console.log(`USDT/BTC: ${this.USDTBTC_PRICE}`);
+				this.calculatePrices();
 			}
 		});
 
 		this.wsBTC.on('close', () => {
-			return this.fetchBTCPrices();
+			this.fetchBTCPrices();
 		});
 	}
 
-	async fetchETHPrices() {
+	private async fetchETHPrices() {
 		this.wsETH = new WebSocket('wss://stream.binance.com:9443/ws/ethusdt@trade');
 
 		this.wsETH.on('open', () => {
@@ -58,22 +65,27 @@ export class wsClient {
 			const { p } = JSON.parse(message.toString());
 
 			if (p) {
-				this.ETHUSDT_PRICE = parseFloat(p);
-				this.getBTCETH_Price();
-				this.USDTETH_PRICE = this.amount / this.ETHUSDT_PRICE;
-
-				// console.log(`ETH/USDT: ${this.ETHUSDT_PRICE}`);
-				// console.log(`USDT/ETH: ${this.USDTETH_PRICE}`);
+				this.wsCacheETHUSDT = parseFloat(p);
+				this.calculatePrices();
 			}
 		});
 
 		this.wsETH.on('close', () => {
-			return this.fetchETHPrices();
+			this.fetchETHPrices();
 		});
 	}
 
-	getBTCETH_Price() {
-		if (this.BTCUSDT_PRICE && this.ETHUSDT_PRICE) {
+	private calculatePrices(inputCurrency?: string, outputCurrency?: string) {
+		if (this.wsCacheBTCUSDT && this.wsCacheETHUSDT) {
+			// GET
+			this.BTCUSDT_PRICE = this.wsCacheBTCUSDT * this.amount;
+			this.USDTBTC_PRICE = this.amount / this.BTCUSDT_PRICE;
+
+			// GET
+			this.ETHUSDT_PRICE = this.wsCacheETHUSDT * this.amount;
+			this.USDTETH_PRICE = this.amount / this.ETHUSDT_PRICE;
+
+			// Calculate BTC/ETH and ETH/BTC prices based on the specified amount
 			this.BTCETH_PRICE = this.BTCUSDT_PRICE / this.ETHUSDT_PRICE;
 			this.ETHBTC_PRICE = this.amount / this.BTCETH_PRICE;
 
