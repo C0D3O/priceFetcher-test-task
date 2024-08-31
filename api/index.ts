@@ -6,10 +6,10 @@ import { wsClient } from '../lib/wsClient';
 	try {
 		const prices = new wsClient();
 		await new Promise((r) => setTimeout(r, 5000));
-		console.log(prices.updateAmount(2, 'BTC', 'USDT'));
-		console.log(prices.updateAmount(3, 'BTC', 'USDT'));
-		console.log(prices.updateAmount(2, 'BTC', 'USDT'));
-		console.log(prices.updateAmount(1, 'BTC', 'USDT'));
+		// console.log(prices.updateAmount(2, 'BTC', 'USDT'));
+		// console.log(prices.updateAmount(3, 'BTC', 'USDT'));
+		// console.log(prices.updateAmount(2, 'BTC', 'USDT'));
+		console.log('PRICE', prices.updateAmount(1, 'BTC', 'USDT'));
 	} catch (error: any) {
 		console.log(error.message);
 	}

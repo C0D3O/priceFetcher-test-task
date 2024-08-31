@@ -3,10 +3,13 @@ import { WebSocket } from 'ws';
 interface Prices {
 	[key: string]: number;
 }
+interface WebSockets {
+	[key: string]: WebSocket;
+}
 
 export class wsClient {
-	private wsBTC: WebSocket | null = null;
-	private wsETH: WebSocket | null = null;
+	private wsBTC: WebSockets = {};
+	private wsETH: WebSockets = {};
 
 	private wsCacheBTCUSDT: Prices = {};
 	private wsCacheETHUSDT: Prices = {};
@@ -25,88 +28,62 @@ export class wsClient {
 	constructor() {
 		this.fetchBTCPricesBinance();
 		this.fetchETHPricesBinance();
+
+		this.fetchBTCPricesKucoin();
+		this.fetchETHPricesKucoin();
 	}
 
 	// Method to update the amount dynamically
 	public updateAmount(newAmount: number, inputCurrency?: string, outputCurrency?: string) {
 		this.amount = newAmount;
-		// WHAT IF AT THIS MOMENT TRADES ARE STOPPED THEN IT MEANS I WOULD GET THE RESULT WITH THE OLD AMOUNT BACK
 
-		return this.calculatePricesBinance(inputCurrency, outputCurrency);
+		return {
+			binance: this.calculatePrices('binance', inputCurrency, outputCurrency),
+			kucoin: this.calculatePrices('kucoin', inputCurrency, outputCurrency),
+		};
 	}
 
 	private async fetchBTCPricesBinance() {
-		this.wsBTC = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
+		this.wsBTC['binance'] = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
 
-		this.wsBTC.on('open', () => {
-			console.log('BTC WEBSOCKET CONNECTED!!!');
+		this.wsBTC['binance'].on('open', () => {
+			console.log('BINANCE BTC WEBSOCKET CONNECTED!!!');
 		});
 
-		this.wsBTC.on('message', (message) => {
+		this.wsBTC['binance'].on('message', (message) => {
 			const { p } = JSON.parse(message.toString());
 
 			if (p) {
 				this.wsCacheBTCUSDT['binance'] = parseFloat(p);
 
-				this.calculatePricesBinance();
+				this.calculatePrices('binance');
 			}
 		});
 
-		this.wsBTC.on('close', () => {
+		this.wsBTC['binance'].on('close', () => {
 			this.fetchBTCPricesBinance();
 		});
 	}
 
 	private async fetchETHPricesBinance() {
-		this.wsETH = new WebSocket('wss://stream.binance.com:9443/ws/ethusdt@trade');
+		this.wsETH['binance'] = new WebSocket('wss://stream.binance.com:9443/ws/ethusdt@trade');
 
-		this.wsETH.on('open', () => {
-			console.log('ETH WEBSOCKET CONNECTED!!!');
+		this.wsETH['binance'].on('open', () => {
+			console.log('BINANCE ETH WEBSOCKET CONNECTED!!!');
 		});
 
-		this.wsETH.on('message', (message) => {
+		this.wsETH['binance'].on('message', (message) => {
 			const { p } = JSON.parse(message.toString());
 
 			if (p) {
 				this.wsCacheETHUSDT['binance'] = parseFloat(p);
-				this.calculatePricesBinance();
+				this.calculatePrices('binance');
 			}
 		});
 
-		this.wsETH.on('close', () => {
+		this.wsETH['binance'].on('close', () => {
 			this.fetchETHPricesBinance();
 		});
-	}
-
-	private calculatePricesBinance(inputCurrency?: string, outputCurrency?: string) {
-		if (this.wsCacheBTCUSDT['binance'] && this.wsCacheETHUSDT['binance']) {
-			// GET BTC PRICE
-			this.BTCUSDT_PRICE['binance'] = this.wsCacheBTCUSDT['binance'] * this.amount;
-			this.USDTBTC_PRICE['binance'] = this.amount / this.BTCUSDT_PRICE['binance'];
-
-			// GET ETH PRICE
-			this.ETHUSDT_PRICE['binance'] = this.wsCacheETHUSDT['binance'] * this.amount;
-			this.USDTETH_PRICE['binance'] = this.amount / this.ETHUSDT_PRICE['binance'];
-
-			// GET BTC ETH PRICE
-			this.BTCETH_PRICE['binance'] = this.BTCUSDT_PRICE['binance'] / this.ETHUSDT_PRICE['binance'];
-			this.ETHBTC_PRICE['binance'] = this.amount / this.BTCETH_PRICE['binance'];
-
-			// console.log(`BTC/ETH: ${this.BTCETH_PRICE}`);
-			// console.log(`ETH/BTC: ${this.ETHBTC_PRICE}`);
-			// console.log('STREAM');
-
-			if (inputCurrency && outputCurrency) {
-				if (inputCurrency === 'BTC' && outputCurrency === 'USDT') return this.BTCUSDT_PRICE['binance'];
-				if (inputCurrency === 'USDT' && outputCurrency === 'BTC') return this.USDTBTC_PRICE['binance'];
-
-				if (inputCurrency === 'ETH' && outputCurrency === 'USDT') return this.ETHUSDT_PRICE['binance'];
-				if (inputCurrency === 'USDT' && outputCurrency === 'ETH') return this.USDTETH_PRICE['binance'];
-
-				if (inputCurrency === 'BTC' && outputCurrency === 'ETH') return this.BTCETH_PRICE['binance'];
-				if (inputCurrency === 'ETH' && outputCurrency === 'BTC') return this.ETHBTC_PRICE['binance'];
-			}
-		}
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -119,76 +96,118 @@ export class wsClient {
 	//////////////////////////////////////////////////////////////////////////
 
 	private async fetchBTCPricesKucoin() {
-		this.wsBTC = new WebSocket('wss://ws-api-spot.kucoin.com/');
+		const res = await (
+			await fetch('https://api.kucoin.com/api/v1/bullet-public', {
+				method: 'POST',
+			})
+		).json();
 
-		this.wsBTC.on('open', () => {
-			console.log('BTC WEBSOCKET CONNECTED!!!');
-		});
+		if (res?.data?.instanceServers?.length && res?.data?.token) {
+			this.wsBTC['kucoin'] = new WebSocket(`${res.data.instanceServers[0]?.endpoint}?token=${res.data.token}`);
 
-		this.wsBTC.on('message', (message) => {
-			const { p } = JSON.parse(message.toString());
+			this.wsBTC['kucoin'].on('open', () => {
+				console.log('KUCOIN BTC WEBSOCKET CONNECTED!!!');
+				this.wsBTC['kucoin'].send(
+					JSON.stringify({
+						id: 1545910660739, //The id should be an unique value
+						type: 'subscribe',
+						topic: '/market/ticker:BTC-USDT',
+						privateChannel: false, //Adopted the private channel or not. Set as false by default.
+						response: true, //Whether the server needs to return the receipt information of this subscription or not. Set as false by default.
+					})
+				);
+			});
 
-			if (p) {
-				// Calculate the total value for the specified amount of BTC
-				this.wsCacheBTCUSDT['kucoin'] = parseFloat(p);
+			this.wsBTC['kucoin'].on('message', (message) => {
+				const res = JSON.parse(message.toString());
 
-				this.calculatePricesKucoin();
-			}
-		});
+				if (res?.data?.price) {
+					// Calculate the total value for the specified amount of BTC
+					this.wsCacheBTCUSDT['kucoin'] = parseFloat(res?.data?.price);
 
-		this.wsBTC.on('close', () => {
+					this.calculatePrices('kucoin');
+				}
+			});
+
+			this.wsBTC['kucoin'].on('close', () => {
+				this.fetchBTCPricesKucoin();
+			});
+		} else {
+			await new Promise((r) => setTimeout(r, 1000));
 			this.fetchBTCPricesKucoin();
-		});
+		}
 	}
 
 	private async fetchETHPricesKucoin() {
-		this.wsETH = new WebSocket('wss://ws-api-spot.kucoin.com/');
+		const res = await (
+			await fetch('https://api.kucoin.com/api/v1/bullet-public', {
+				method: 'POST',
+			})
+		).json();
 
-		this.wsETH.on('open', () => {
-			console.log('ETH WEBSOCKET CONNECTED!!!');
-		});
+		if (res?.data?.instanceServers?.length && res?.data?.token) {
+			this.wsETH['kucoin'] = new WebSocket(`wss://ws-api-spot.kucoin.com/?token=${res.data.token}`);
 
-		this.wsETH.on('message', (message) => {
-			const { p } = JSON.parse(message.toString());
+			this.wsETH['kucoin'].on('open', () => {
+				console.log('KUCOIN ETH WEBSOCKET CONNECTED!!!');
+				this.wsETH['kucoin'].send(
+					JSON.stringify({
+						id: 1545910660739, //The id should be an unique value
+						type: 'subscribe',
+						topic: '/market/ticker:ETH-USDT',
+						privateChannel: false, //Adopted the private channel or not. Set as false by default.
+						response: true, //Whether the server needs to return the receipt information of this subscription or not. Set as false by default.
+					})
+				);
+			});
 
-			if (p) {
-				this.wsCacheETHUSDT['kucoin'] = parseFloat(p);
-				this.calculatePricesKucoin();
-			}
-		});
+			this.wsETH['kucoin'].on('message', (message) => {
+				const res = JSON.parse(message.toString());
 
-		this.wsETH.on('close', () => {
-			this.fetchETHPricesKucoin();
-		});
+				if (res?.data?.price) {
+					// Calculate the total value for the specified amount of BTC
+					this.wsCacheETHUSDT['kucoin'] = parseFloat(res?.data?.price);
+
+					this.calculatePrices('kucoin');
+				}
+			});
+
+			this.wsETH['kucoin'].on('close', () => {
+				this.fetchETHPricesKucoin();
+			});
+		} else {
+			await new Promise((r) => setTimeout(r, 1000));
+			this.fetchBTCPricesKucoin();
+		}
 	}
 
-	private calculatePricesKucoin(inputCurrency?: string, outputCurrency?: string) {
-		if (this.wsCacheBTCUSDT['kucoin'] && this.wsCacheETHUSDT['kucoin']) {
+	private calculatePrices(exchangeName: string, inputCurrency?: string, outputCurrency?: string) {
+		if (this.wsCacheBTCUSDT[exchangeName] && this.wsCacheETHUSDT[exchangeName]) {
 			// GET BTC PRICE
-			this.BTCUSDT_PRICE['kucoin'] = this.wsCacheBTCUSDT['kucoin'] * this.amount;
-			this.USDTBTC_PRICE['kucoin'] = this.amount / this.BTCUSDT_PRICE['kucoin'];
+			this.BTCUSDT_PRICE[exchangeName] = this.wsCacheBTCUSDT[exchangeName] * this.amount;
+			this.USDTBTC_PRICE[exchangeName] = this.amount / this.BTCUSDT_PRICE[exchangeName];
 
 			// GET ETH PRICE
-			this.ETHUSDT_PRICE['kucoin'] = this.wsCacheETHUSDT['kucoin'] * this.amount;
-			this.USDTETH_PRICE['kucoin'] = this.amount / this.ETHUSDT_PRICE['kucoin'];
+			this.ETHUSDT_PRICE[exchangeName] = this.wsCacheETHUSDT[exchangeName] * this.amount;
+			this.USDTETH_PRICE[exchangeName] = this.amount / this.ETHUSDT_PRICE[exchangeName];
 
 			// GET BTC ETH PRICE
-			this.BTCETH_PRICE['kucoin'] = this.BTCUSDT_PRICE['kucoin'] / this.ETHUSDT_PRICE['kucoin'];
-			this.ETHBTC_PRICE['kucoin'] = this.amount / this.BTCETH_PRICE['kucoin'];
+			this.BTCETH_PRICE[exchangeName] = this.BTCUSDT_PRICE[exchangeName] / this.ETHUSDT_PRICE[exchangeName];
+			this.ETHBTC_PRICE[exchangeName] = this.amount / this.BTCETH_PRICE[exchangeName];
 
 			// console.log(`BTC/ETH: ${this.BTCETH_PRICE}`);
 			// console.log(`ETH/BTC: ${this.ETHBTC_PRICE}`);
 			// console.log('STREAM');
 
 			if (inputCurrency && outputCurrency) {
-				if (inputCurrency === 'BTC' && outputCurrency === 'USDT') return this.BTCUSDT_PRICE['kucoin'];
-				if (inputCurrency === 'USDT' && outputCurrency === 'BTC') return this.USDTBTC_PRICE['kucoin'];
+				if (inputCurrency === 'BTC' && outputCurrency === 'USDT') return this.BTCUSDT_PRICE[exchangeName];
+				if (inputCurrency === 'USDT' && outputCurrency === 'BTC') return this.USDTBTC_PRICE[exchangeName];
 
-				if (inputCurrency === 'ETH' && outputCurrency === 'USDT') return this.ETHUSDT_PRICE['kucoin'];
-				if (inputCurrency === 'USDT' && outputCurrency === 'ETH') return this.USDTETH_PRICE['kucoin'];
+				if (inputCurrency === 'ETH' && outputCurrency === 'USDT') return this.ETHUSDT_PRICE[exchangeName];
+				if (inputCurrency === 'USDT' && outputCurrency === 'ETH') return this.USDTETH_PRICE[exchangeName];
 
-				if (inputCurrency === 'BTC' && outputCurrency === 'ETH') return this.BTCETH_PRICE['kucoin'];
-				if (inputCurrency === 'ETH' && outputCurrency === 'BTC') return this.ETHBTC_PRICE['kucoin'];
+				if (inputCurrency === 'BTC' && outputCurrency === 'ETH') return this.BTCETH_PRICE[exchangeName];
+				if (inputCurrency === 'ETH' && outputCurrency === 'BTC') return this.ETHBTC_PRICE[exchangeName];
 			}
 		}
 	}
