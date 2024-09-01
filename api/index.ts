@@ -38,7 +38,7 @@ const validateReq = [
 
 app.post('/estimate', validateReq, async (req: Request, res: Response) => {
 	try {
-		const { inputCurrency, outputCurrency, inputAmount } = req.body as RequestBody;
+		const { inputAmount, inputCurrency, outputCurrency } = req.body as RequestBody;
 
 		const fetchedPrices = await prices.updateAmount(inputAmount, inputCurrency, outputCurrency);
 

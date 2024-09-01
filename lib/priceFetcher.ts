@@ -268,6 +268,7 @@ export class priceFetcher {
 			this.calculatePrices('kucoin', inputCurrency, outputCurrency),
 			this.fetchUniswapPrices(inputCurrency, outputCurrency),
 		]);
+		console.log('binancePrice:', binancePrice, 'kucoinPrice:', kucoinPrice, 'uniswapPrice:', uniswapPrice);
 
 		return [
 			{ exchangeName: 'binance', rate: binancePrice },
