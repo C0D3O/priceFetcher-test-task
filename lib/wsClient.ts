@@ -1,13 +1,7 @@
-import { formatUnits, parseUnits } from 'ethers';
+import { Contract, formatUnits, parseUnits, WebSocketProvider } from 'ethers';
 import { WebSocket } from 'ws';
-import { tokens, uniswapContract } from './evm';
-
-interface Prices {
-	[key: string]: number;
-}
-interface WebSockets {
-	[key: string]: WebSocket;
-}
+import { abi, tokens } from './evm';
+import { WebSockets, Prices } from './interfaces';
 
 export class wsClient {
 	private wsBTC: WebSockets = {};
@@ -16,18 +10,23 @@ export class wsClient {
 	private wsCacheBTCUSDT: Prices = {};
 	private wsCacheETHUSDT: Prices = {};
 
-	public BTCUSDT_PRICE: Prices = {};
-	public USDTBTC_PRICE: Prices = {};
+	private uniswapContract: Contract | null = null;
+	private webSocketProvider: WebSocketProvider | null = null;
 
-	public ETHUSDT_PRICE: Prices = {};
-	public USDTETH_PRICE: Prices = {};
+	private BTCUSDT_PRICE: Prices = {};
+	private USDTBTC_PRICE: Prices = {};
 
-	public BTCETH_PRICE: Prices = {};
-	public ETHBTC_PRICE: Prices = {};
+	private ETHUSDT_PRICE: Prices = {};
+	private USDTETH_PRICE: Prices = {};
 
-	public amount: number = 1;
+	private BTCETH_PRICE: Prices = {};
+	private ETHBTC_PRICE: Prices = {};
+
+	private amount: number = 1;
 
 	constructor() {
+		this.getProvider();
+
 		this.fetchBTCPricesBinance();
 		this.fetchETHPricesBinance();
 
@@ -35,27 +34,25 @@ export class wsClient {
 		this.fetchETHPricesKucoin();
 	}
 
-	public async updateAmount(newAmount: number, inputCurrency?: string, outputCurrency?: string) {
-		this.amount = newAmount;
+	private getProvider() {
+		this.webSocketProvider = new WebSocketProvider('wss://ethereum-rpc.publicnode.com');
 
-		const [binancePrice, kucoinPrice, uniswapPrice] = await Promise.all([
-			this.calculatePrices('binance', inputCurrency, outputCurrency),
-			this.calculatePrices('kucoin', inputCurrency, outputCurrency),
-			this.fetchUniswapPrices(inputCurrency, outputCurrency),
-		]);
-		console.log(binancePrice, kucoinPrice);
+		this.webSocketProvider.on('error', () => {
+			console.log('Reconnecting webSocket provider...');
+			this.getProvider();
+		});
 
-		return [
-			{ exchangeName: 'binance', rate: binancePrice },
-			{ exchangeName: 'kucoin', rate: kucoinPrice },
-			{ exchangeName: 'uniswap', rate: uniswapPrice },
-		];
+		this.prepareUniswap();
+	}
+
+	private prepareUniswap() {
+		this.uniswapContract = new Contract('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', abi, this.webSocketProvider);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
-	//////////////////////////////// KUCOIN //////////////////////////////////
+	//////////////////////////////// BINANCE /////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
@@ -210,7 +207,7 @@ export class wsClient {
 		const tokenIn = inputCurrency === 'ETH' ? tokens.WETH : tokens[inputCurrency];
 		const tokenOut = outputCurrency === 'ETH' ? tokens.WETH : tokens[outputCurrency];
 
-		const amountsOut = await uniswapContract.getAmountsOut(
+		const amountsOut = await this.uniswapContract.getAmountsOut(
 			parseUnits(String(this.amount), tokenIn.decimals),
 			isWETH ? [tokenIn.address, tokenOut.address] : [tokenIn.address, tokens.WETH.address, tokenOut.address]
 		);
@@ -229,7 +226,7 @@ export class wsClient {
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
-	//////////////////////////////// CALCULATE  //////////////////////////////
+	//////////////////////////////// CALCULATE ///////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
@@ -248,10 +245,6 @@ export class wsClient {
 			this.BTCETH_PRICE[exchangeName] = this.BTCUSDT_PRICE[exchangeName] / this.ETHUSDT_PRICE[exchangeName];
 			this.ETHBTC_PRICE[exchangeName] = this.amount / this.BTCETH_PRICE[exchangeName];
 
-			// console.log(`BTC/ETH: ${this.BTCETH_PRICE}`);
-			// console.log(`ETH/BTC: ${this.ETHBTC_PRICE}`);
-			// console.log('STREAM');
-
 			if (inputCurrency && outputCurrency) {
 				if (inputCurrency === 'BTC' && outputCurrency === 'USDT') return this.BTCUSDT_PRICE[exchangeName];
 				if (inputCurrency === 'USDT' && outputCurrency === 'BTC') return this.USDTBTC_PRICE[exchangeName];
@@ -263,5 +256,25 @@ export class wsClient {
 				if (inputCurrency === 'ETH' && outputCurrency === 'BTC') return this.ETHBTC_PRICE[exchangeName];
 			}
 		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////// REQ MAIN FUNCION ////////////////////////////
+	//////////////////////////////////////////////////////////////////////////
+
+	public async updateAmount(newAmount: number, inputCurrency?: string, outputCurrency?: string) {
+		this.amount = newAmount;
+
+		const [binancePrice, kucoinPrice, uniswapPrice] = await Promise.all([
+			this.calculatePrices('binance', inputCurrency, outputCurrency),
+			this.calculatePrices('kucoin', inputCurrency, outputCurrency),
+			this.fetchUniswapPrices(inputCurrency, outputCurrency),
+		]);
+
+		return [
+			{ exchangeName: 'binance', rate: binancePrice },
+			{ exchangeName: 'kucoin', rate: kucoinPrice },
+			{ exchangeName: 'uniswap', rate: uniswapPrice },
+		];
 	}
 }

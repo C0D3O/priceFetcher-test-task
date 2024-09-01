@@ -8,7 +8,7 @@ export const tokens = {
 	USDT: { address: '0xdac17f958d2ee523a2206206994597c13d831ec7', decimals: 6 },
 };
 
-const abi = [
+export const abi = [
 	{
 		inputs: [
 			{ internalType: 'uint256', name: 'amountIn', type: 'uint256' },
@@ -20,6 +20,3 @@ const abi = [
 		type: 'function',
 	},
 ];
-
-const provider = new WebSocketProvider('wss://ethereum-rpc.publicnode.com');
-export const uniswapContract = new Contract('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', abi, provider);

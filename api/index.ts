@@ -1,14 +1,17 @@
 import express, { NextFunction, Request, Response } from 'express';
 import { check, validationResult } from 'express-validator';
-import { wsClient } from '../lib/wsClient';
+
+import { RequestBody } from '../lib/interfaces';
 import { supportedTokens } from '../lib/evm';
 
-// ПРОБЛЕМА НЕ ХВАТАЕТ ЛИКВЫ В ЮНИСВАПЕ
-// ПРОБЛЕМА 2 - для того чтобы парсить све очень быстро нужен кеш с юнисвапа а для этого по идее своя нода в меиннете, чтобы не посылать запрос на цену в момент самого запроса к сервису, а просто чтобы его возвращать
+import { wsClient } from '../lib/wsClient';
+
+///////////////
+///////////////
+
 const prices = new wsClient();
 
 const app = express();
-
 app.use(express.json());
 
 const validateReq = [
@@ -21,7 +24,7 @@ const validateReq = [
 			return res.status(400).json({ errors: errors.array() });
 		}
 
-		const { inputCurrency, outputCurrency } = req.body;
+		const { inputCurrency, outputCurrency } = req.body as RequestBody;
 
 		if (!supportedTokens.includes(inputCurrency)) {
 			return res.status(400).json({ errors: [{ msg: 'Unsupported currency', param: 'inputCurrency' }] });
@@ -35,7 +38,7 @@ const validateReq = [
 
 app.post('/estimate', validateReq, async (req: Request, res: Response) => {
 	try {
-		const { inputCurrency, outputCurrency, inputAmount } = req.body;
+		const { inputCurrency, outputCurrency, inputAmount } = req.body as RequestBody;
 
 		const fetchedPrices = await prices.updateAmount(inputAmount, inputCurrency, outputCurrency);
 
@@ -47,11 +50,9 @@ app.post('/estimate', validateReq, async (req: Request, res: Response) => {
 
 app.post('/getRates', validateReq, async (req: Request, res: Response) => {
 	try {
-		const { inputCurrency, outputCurrency } = req.body;
-		console.log('HI');
+		const { inputCurrency, outputCurrency } = req.body as RequestBody;
 
 		const fetchedPrices = await prices.updateAmount(1, inputCurrency, outputCurrency);
-		console.log('HI2');
 
 		res.send(fetchedPrices);
 	} catch (error: any) {
@@ -59,4 +60,6 @@ app.post('/getRates', validateReq, async (req: Request, res: Response) => {
 	}
 });
 
-app.listen(3000);
+app.listen(3000, () => {
+	console.log('Service is running on port 3000');
+});
