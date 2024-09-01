@@ -3,7 +3,7 @@ import { WebSocket } from 'ws';
 import { abi, tokens } from './evm';
 import { WebSockets, Prices } from './interfaces';
 
-export class wsClient {
+export class priceFetcher {
 	private wsBTC: WebSockets = {};
 	private wsETH: WebSockets = {};
 
@@ -36,9 +36,10 @@ export class wsClient {
 
 	private getProvider() {
 		this.webSocketProvider = new WebSocketProvider('wss://ethereum-rpc.publicnode.com');
+		console.log('UNISWAP WEBSOCKET CONNECTED !!!');
 
 		this.webSocketProvider.on('error', () => {
-			console.log('Reconnecting webSocket provider...');
+			console.log('Reconnecting Uniswap WebSocket provider...');
 			this.getProvider();
 		});
 
@@ -61,7 +62,7 @@ export class wsClient {
 		this.wsBTC['binance'] = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
 
 		this.wsBTC['binance'].on('open', () => {
-			console.log('BINANCE BTC WEBSOCKET CONNECTED!!!');
+			console.log('BINANCE BTC WEBSOCKET CONNECTED !!!');
 		});
 
 		this.wsBTC['binance'].on('message', (message) => {
@@ -82,7 +83,7 @@ export class wsClient {
 		this.wsETH['binance'] = new WebSocket('wss://stream.binance.com:9443/ws/ethusdt@trade');
 
 		this.wsETH['binance'].on('open', () => {
-			console.log('BINANCE ETH WEBSOCKET CONNECTED!!!');
+			console.log('BINANCE ETH WEBSOCKET CONNECTED !!!');
 		});
 
 		this.wsETH['binance'].on('message', (message) => {
@@ -118,7 +119,7 @@ export class wsClient {
 			this.wsBTC['kucoin'] = new WebSocket(`${res.data.instanceServers[0]?.endpoint}?token=${res.data.token}`);
 
 			this.wsBTC['kucoin'].on('open', () => {
-				console.log('KUCOIN BTC WEBSOCKET CONNECTED!!!');
+				console.log('KUCOIN BTC WEBSOCKET CONNECTED !!!');
 				this.wsBTC['kucoin'].send(
 					JSON.stringify({
 						id: 1545910660739, //The id should be an unique value
@@ -134,7 +135,6 @@ export class wsClient {
 				const res = JSON.parse(message.toString());
 
 				if (res?.data?.price) {
-					// Calculate the total value for the specified amount of BTC
 					this.wsCacheBTCUSDT['kucoin'] = parseFloat(res?.data?.price);
 
 					this.calculatePrices('kucoin');
@@ -158,10 +158,10 @@ export class wsClient {
 		).json();
 
 		if (res?.data?.instanceServers?.length && res?.data?.token) {
-			this.wsETH['kucoin'] = new WebSocket(`wss://ws-api-spot.kucoin.com/?token=${res.data.token}`);
+			this.wsETH['kucoin'] = new WebSocket(`${res.data.instanceServers[0]?.endpoint}?token=${res.data.token}`);
 
 			this.wsETH['kucoin'].on('open', () => {
-				console.log('KUCOIN ETH WEBSOCKET CONNECTED!!!');
+				console.log('KUCOIN ETH WEBSOCKET CONNECTED !!!');
 				this.wsETH['kucoin'].send(
 					JSON.stringify({
 						id: 1545910660739, //The id should be an unique value
@@ -177,7 +177,6 @@ export class wsClient {
 				const res = JSON.parse(message.toString());
 
 				if (res?.data?.price) {
-					// Calculate the total value for the specified amount of BTC
 					this.wsCacheETHUSDT['kucoin'] = parseFloat(res?.data?.price);
 
 					this.calculatePrices('kucoin');

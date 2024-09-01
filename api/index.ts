@@ -4,12 +4,12 @@ import { check, validationResult } from 'express-validator';
 import { RequestBody } from '../lib/interfaces';
 import { supportedTokens } from '../lib/evm';
 
-import { wsClient } from '../lib/wsClient';
+import { priceFetcher } from '../lib/priceFetcher';
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 
-const prices = new wsClient();
+const prices = new priceFetcher();
 
 const app = express();
 app.use(express.json());
