@@ -36,7 +36,6 @@ export class priceFetcher {
 
 	private getProvider() {
 		this.webSocketProvider = new WebSocketProvider('wss://ethereum-rpc.publicnode.com');
-		console.log('UNISWAP WEBSOCKET CONNECTED !!!');
 
 		this.webSocketProvider.on('error', () => {
 			console.log('Reconnecting Uniswap WebSocket provider...');
