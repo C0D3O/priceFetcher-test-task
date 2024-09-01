@@ -6,8 +6,8 @@ import { supportedTokens } from '../lib/evm';
 
 import { wsClient } from '../lib/wsClient';
 
-///////////////
-///////////////
+////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
 
 const prices = new wsClient();
 
@@ -61,5 +61,5 @@ app.post('/getRates', validateReq, async (req: Request, res: Response) => {
 });
 
 app.listen(3000, () => {
-	console.log('Service is running on port 3000');
+	console.log('Service is running on port 3000\n');
 });
