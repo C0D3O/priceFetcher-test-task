@@ -1,9 +1,9 @@
 import express, { Request, Response } from 'express';
 
 import { RequestBody } from '../lib/interfaces';
+import { validateReq } from '../lib/middleware';
 
 import { priceFetcher } from '../lib/priceFetcher';
-import { validateReq } from '../lib/middleware';
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
