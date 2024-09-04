@@ -17,7 +17,7 @@ app.post('/estimate', validateReq, async (req: Request, res: Response) => {
 	try {
 		const { inputAmount, inputCurrency, outputCurrency } = req.body as RequestBody;
 
-		const fetchedPrices = await prices.updateAmount(inputAmount, inputCurrency, outputCurrency);
+		const fetchedPrices = await prices.updateAmount(inputCurrency, outputCurrency, inputAmount);
 
 		res.send(fetchedPrices.reduce((max, current) => (current[1] > max[1] ? current : max)));
 	} catch (error: any) {
@@ -29,7 +29,7 @@ app.post('/getRates', validateReq, async (req: Request, res: Response) => {
 	try {
 		const { inputCurrency, outputCurrency } = req.body as RequestBody;
 
-		const fetchedPrices = await prices.updateAmount(1, inputCurrency, outputCurrency);
+		const fetchedPrices = await prices.updateAmount(inputCurrency, outputCurrency);
 
 		res.send(fetchedPrices);
 	} catch (error: any) {

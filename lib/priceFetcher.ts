@@ -25,8 +25,10 @@ export class priceFetcher {
 	private amount: number = 1;
 
 	constructor() {
+		// инициализируем юнисвап контракт
 		this.getProvider();
 
+		// и начинает кешировать цены с бирж
 		this.fetchBTCPricesBinance();
 		this.fetchETHPricesBinance();
 
@@ -67,12 +69,14 @@ export class priceFetcher {
 		this.wsBTC['binance'].on('message', (message) => {
 			const { p } = JSON.parse(message.toString());
 
+			// если получаем цену то обновляем кеш
 			if (p) {
 				this.wsCacheBTCUSDT['binance'] = parseFloat(p);
+				// и обновляем кеш всех цен
 				this.calculatePrices('binance');
 			}
 		});
-
+		// при разрыве соединения поднимаем его снова
 		this.wsBTC['binance'].on('close', () => {
 			this.fetchBTCPricesBinance();
 		});
@@ -108,6 +112,7 @@ export class priceFetcher {
 	//////////////////////////////////////////////////////////////////////////
 
 	private async fetchBTCPricesKucoin() {
+		// получаем токен авторизации и текущий эндпоинт для вебсокет подключения
 		const res = await (
 			await fetch('https://api.kucoin.com/api/v1/bullet-public', {
 				method: 'POST',
@@ -119,6 +124,8 @@ export class priceFetcher {
 
 			this.wsBTC['kucoin'].on('open', () => {
 				console.log('KUCOIN BTC WEBSOCKET CONNECTED !!!');
+
+				// подписываемся на нужный топик для получения цен
 				this.wsBTC['kucoin'].send(
 					JSON.stringify({
 						id: 1545910660739, //The id should be an unique value
@@ -135,7 +142,6 @@ export class priceFetcher {
 
 				if (res?.data?.price) {
 					this.wsCacheBTCUSDT['kucoin'] = parseFloat(res?.data?.price);
-
 					this.calculatePrices('kucoin');
 				}
 			});
@@ -200,6 +206,7 @@ export class priceFetcher {
 	//////////////////////////////////////////////////////////////////////////
 
 	async fetchUniswapPrices(inputCurrency?: string, outputCurrency?: string) {
+		// я так и не смог нагуглить красивую формулу, возможно ее и нет поэтому пришлось мудрить самому, ну работает в итоге с какими угодно эмаунтами
 		const isWETH = inputCurrency === 'ETH' || outputCurrency === 'ETH';
 
 		const tokenIn = inputCurrency === 'ETH' ? tokens.WETH : tokens[inputCurrency];
@@ -212,7 +219,6 @@ export class priceFetcher {
 
 		const amountOut = formatUnits(amountsOut[isWETH ? 1 : 2], tokenOut.decimals);
 
-		// return +amountOut / this.amount;
 		return tokenIn.address === tokens.USDT.address
 			? parseFloat(amountOut)
 			: /////////////
@@ -229,6 +235,7 @@ export class priceFetcher {
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 
+	// функция обновления всех кешей цен
 	private calculatePrices(exchangeName: string, inputCurrency?: string, outputCurrency?: string) {
 		if (this.wsCacheBTCUSDT[exchangeName] && this.wsCacheETHUSDT[exchangeName]) {
 			// GET BTC PRICE
@@ -260,7 +267,9 @@ export class priceFetcher {
 	//////////////////////////// REQ MAIN FUNCION ////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 
-	public async updateAmount(newAmount: number, inputCurrency?: string, outputCurrency?: string) {
+	// единственная доступаная функция для пользователя которая возвращает нужные цены
+
+	public async updateAmount(inputCurrency: string, outputCurrency: string, newAmount: number = 1) {
 		this.amount = newAmount;
 
 		const [binancePrice, kucoinPrice, uniswapPrice] = await Promise.all([
