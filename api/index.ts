@@ -15,7 +15,7 @@ app.use(express.json());
 
 app.post('/estimate', validateReq, async (req: Request, res: Response) => {
 	try {
-		const { inputAmount, inputCurrency, outputCurrency } = req.body as RequestBody;
+		const { inputCurrency, outputCurrency, inputAmount } = req.body as RequestBody;
 
 		const fetchedPrices = await prices.updateAmount(inputCurrency, outputCurrency, inputAmount);
 
