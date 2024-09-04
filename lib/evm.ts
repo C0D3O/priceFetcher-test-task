@@ -1,4 +1,3 @@
-import { Contract, WebSocketProvider } from 'ethers';
 export const supportedTokens = ['ETH', 'BTC', 'USDT'];
 
 export const tokens = {
